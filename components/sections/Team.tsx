@@ -1,41 +1,44 @@
 import Image from "next/image";
-import { Activity, HeartPulse } from "lucide-react";
+import { HeartPulse } from "lucide-react";
 import drMaheshwar from "@/assets/images/dr-maheshwar.jpg";
 export function Team() {
   return (
-    <section className="bg-kinex-surface px-6 py-20 lg:px-8 lg:py-28">
-      <div className="mx-auto grid max-w-[1200px] items-center gap-14 lg:grid-cols-2 lg:gap-20">
-        <div className="relative mx-auto w-full max-w-[520px] lg:mx-0">
-          <div className="overflow-hidden rounded-3xl shadow-card ring-1 ring-kinex-outline/10">
+    <section
+      id="aboutus"
+      className="scroll-mt-[88px] bg-kinex-surface px-6 py-12 lg:px-8 lg:py-16"
+    >
+      <div className="mx-auto grid max-w-[1200px] items-center gap-8 lg:grid-cols-2 lg:gap-12">
+        <div className="relative mx-auto w-full max-w-[400px] lg:mx-0">
+          <div className="overflow-hidden rounded-2xl shadow-card ring-1 ring-kinex-outline/10">
             <Image
               src={drMaheshwar}
               alt="Dr. Maheshvar Prajapati, senior consultant in white coat"
-              width={560}
-              height={560}
+              width={440}
+              height={440}
               className="h-auto w-full object-cover object-top"
-              sizes="(max-width: 1024px) 100vw, 50vw"
+              sizes="(max-width: 1024px) 100vw, 400px"
             />
           </div>
-          <div className="absolute -bottom-4 left-6 rounded-xl bg-kinex-primary px-5 py-3 shadow-ambient">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/90">
+          <div className="absolute -bottom-3 left-4 rounded-lg bg-kinex-primary px-4 py-2 shadow-ambient">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/90">
               EXPERIENCE
             </p>
-            <p className="text-lg font-bold text-white">15+ Years</p>
+            <p className="text-base font-bold text-white">15+ Years</p>
           </div>
         </div>
 
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-kinex-muted">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-kinex-muted">
             Senior Consultant
           </p>
-          <h2 className="mt-3 text-3xl font-bold tracking-[-0.02em] text-kinex-on-surface md:text-[2.35rem] md:leading-tight">
+          <h2 className="mt-2 text-2xl font-bold tracking-[-0.02em] text-kinex-on-surface md:text-[1.85rem] md:leading-tight">
             Dr. Maheshvar Prajapati
           </h2>
           {/* <p className="mt-6 text-lg italic leading-relaxed text-kinex-on-surface-variant md:text-xl">
             &ldquo;Movement is medicine. Our goal is to restore not just function,
             but the confidence to live fully without limits.&rdquo;
           </p> */}
-          <div className="mt-8 space-y-5 text-[16px] leading-relaxed text-kinex-on-surface-variant">
+          <div className="mt-5 space-y-3 text-[15px] leading-relaxed text-kinex-on-surface-variant">
             <p>
               Dr. Prajapati leads Kinex&apos;s musculoskeletal and performance
               medicine programs, blending evidence-based orthopedics with
@@ -50,7 +53,7 @@ export function Team() {
               their path forward and feels supported at every milestone.
             </p>
           </div>
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-10">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-8">
             {/* <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-kinex-on-surface">
               <Activity
                 className="h-5 w-5 shrink-0 text-kinex-primary"

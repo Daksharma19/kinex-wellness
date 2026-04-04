@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
+import legTherapy from "@/assets/images/leg-therapy.jpg";
+
 const services = [
   {
     title: "Pain Relief & Signal Interception",
@@ -23,7 +25,7 @@ const services = [
     title: "Cellular Healing & Inflammation Reduction",
     description:
       "By boosting localised blood circulation and calming inflammatory responses, our electrotherapy protocols speak your body's native electrical language—accelerating tissue repair at the cellular level so you heal faster, naturally.",
-    image: require("../../assets/images/leg-therapy.jpg"),
+    image: legTherapy,
     alt: "Advanced electrotherapy device delivering treatment to a patient's knee",
   },
 ];

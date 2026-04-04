@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 
-import { ContactDepartmentDirectory } from "@/components/contact/ContactDepartmentDirectory";
 import { ContactInfoCards } from "@/components/contact/ContactInfoCards";
 import { ContactMainSection } from "@/components/contact/ContactMainSection";
-import { ContactMarketingFooter } from "@/components/contact/ContactMarketingFooter";
-import { ContactMarketingNav } from "@/components/contact/ContactMarketingNav";
+import { Footer } from "@/components/layout/Footer";
+import { Navbar } from "@/components/layout/Navbar";
 
 export const metadata: Metadata = {
   title: "Contact Us | Kinex",
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <>
-      <ContactMarketingNav />
+      <Navbar />
       <main>
         <section className="relative overflow-hidden bg-gradient-to-b from-cyan-50/80 via-white to-white pb-14 pt-12 md:pb-16 md:pt-16">
           <div
@@ -40,7 +39,7 @@ export default function ContactPage() {
         <ContactMainSection />
         {/* <ContactDepartmentDirectory /> */}
       </main>
-      <ContactMarketingFooter />
+      <Footer />
     </>
   );
 }

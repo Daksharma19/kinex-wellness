@@ -1,7 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Menu } from "lucide-react";
+
+import kinexLogo from "@/assets/images/kinex-wellness-logo.png";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,9 +17,9 @@ import {
 } from "@/components/ui/sheet";
 
 const links = [
-  { href: "#services", label: "Services" },
-  { href: "#aboutus", label: "About Us" },
-  { href: "#resources", label: "Resources" },
+  { href: "/services", label: "Services" },
+  { href: "/#aboutus", label: "About Us" },
+  // { href: "#resources", label: "Resources" },
   { href: "/contact", label: "Contact Us" },
 ];
 
@@ -26,9 +29,19 @@ export function Navbar() {
       <div className="mx-auto flex h-[72px] max-w-[1200px] items-center justify-between px-6 lg:px-8">
         <Link
           href="/"
-          className="text-xl font-bold tracking-tight text-kinex-primary"
+          className="flex min-w-0 max-w-[min(100%,220px)] items-center gap-2.5 text-kinex-primary sm:max-w-none md:gap-3"
         >
-          Kinex
+          <Image
+            src={kinexLogo}
+            alt=""
+            width={48}
+            height={48}
+            className="h-9 w-9 shrink-0 object-contain md:h-10 md:w-10"
+            priority
+          />
+          <span className="text-left text-[15px] font-bold leading-snug tracking-tight md:text-lg">
+            Kinex Wellness & Rehab
+          </span>
         </Link>
 
         <nav className="absolute left-1/2 hidden -translate-x-1/2 md:flex md:items-center md:gap-10">
