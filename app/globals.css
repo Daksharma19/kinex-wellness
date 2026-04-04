@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet: custom marker wrapper (no default tile border) */
+.kinex-leaflet-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
 @layer base {
   :root {
     --background: 210 20% 98%;

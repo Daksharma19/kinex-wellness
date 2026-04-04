@@ -14,15 +14,15 @@ import {
 } from "@/components/ui/sheet";
 
 const links = [
-  { href: "#services", label: "Services" },
-  { href: "#aboutus", label: "About Us" },
-  { href: "#resources", label: "Resources" },
-  { href: "/contact", label: "Contact Us" },
+  { href: "/#solutions", label: "Platform" },
+  { href: "/#solutions", label: "Solutions" },
+  { href: "/#resources", label: "Resources" },
+  { href: "/#pricing", label: "Pricing" },
 ];
 
-export function Navbar() {
+export function ContactMarketingNav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-kinex-outline/10 bg-white/80 shadow-nav backdrop-blur-xl backdrop-saturate-150">
+    <header className="sticky top-0 z-40 border-b border-kinex-outline/10 bg-white/90 shadow-nav backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex h-[72px] max-w-[1200px] items-center justify-between px-6 lg:px-8">
         <Link
           href="/"
@@ -34,7 +34,7 @@ export function Navbar() {
         <nav className="absolute left-1/2 hidden -translate-x-1/2 md:flex md:items-center md:gap-10">
           {links.map((l) => (
             <Link
-              key={l.href}
+              key={`${l.href}-${l.label}`}
               href={l.href}
               className="text-[15px] font-medium text-kinex-on-surface-variant transition-colors hover:text-kinex-primary"
             >
@@ -77,13 +77,14 @@ export function Navbar() {
             </SheetHeader>
             <nav className="mt-8 flex flex-col gap-4">
               {links.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="text-lg font-medium text-kinex-on-surface"
-                >
-                  {l.label}
-                </Link>
+                <SheetClose asChild key={`${l.href}-${l.label}`}>
+                  <Link
+                    href={l.href}
+                    className="text-lg font-medium text-kinex-on-surface"
+                  >
+                    {l.label}
+                  </Link>
+                </SheetClose>
               ))}
               <SheetClose asChild>
                 <Link

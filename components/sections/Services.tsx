@@ -23,8 +23,7 @@ const services = [
     title: "Cellular Healing & Inflammation Reduction",
     description:
       "By boosting localised blood circulation and calming inflammatory responses, our electrotherapy protocols speak your body's native electrical language—accelerating tissue repair at the cellular level so you heal faster, naturally.",
-    image:
-      "/assets/images/leg-therapy.jpg",
+    image: require("../../assets/images/leg-therapy.jpg"),
     alt: "Advanced electrotherapy device delivering treatment to a patient's knee",
   },
 ];
