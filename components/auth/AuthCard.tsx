@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Apple } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { signIn, signUp } from "@/lib/auth";
+import type { UserRole } from "@/lib/database.types";
+import { dashboardPathForRole } from "@/lib/dashboard-route";
+import { fetchProfileRole } from "@/lib/supabase-appointments";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "login" | "signup";
@@ -41,6 +45,8 @@ function GoogleMark({ className }: { className?: string }) {
 export function AuthCard() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const mode: AuthMode = useMemo(() => {
     const m = searchParams.get("mode");
@@ -53,6 +59,72 @@ export function AuthCard() {
     },
     [router]
   );
+
+  async function redirectAfterAuth(userId: string) {
+    const { data: profile, error } = await fetchProfileRole(userId);
+    if (error) {
+      setFormError(error.message);
+      return;
+    }
+    router.replace(dashboardPathForRole(profile?.role));
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setFormError(null);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const email = String(fd.get("email") ?? "").trim();
+    const password = String(fd.get("password") ?? "");
+    if (!email || !password) {
+      setFormError("Enter email and password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (mode === "signup") {
+        const fullName = String(fd.get("name") ?? "").trim();
+        const role = String(fd.get("role") ?? "patient") as UserRole;
+        if (!fullName) {
+          setFormError("Enter your full name.");
+          return;
+        }
+        if (!["patient", "doctor", "admin"].includes(role)) {
+          setFormError("Choose a valid account type.");
+          return;
+        }
+        const { data, error } = await signUp({
+          email,
+          password,
+          fullName,
+          role,
+        });
+        if (error) {
+          setFormError(error.message);
+          return;
+        }
+        if (data.session?.user?.id) {
+          await redirectAfterAuth(data.session.user.id);
+        } else {
+          setFormError(
+            "Check your email to confirm your account, then sign in."
+          );
+        }
+      } else {
+        const { data, error } = await signIn(email, password);
+        if (error) {
+          setFormError(error.message);
+          return;
+        }
+        const uid = data.session?.user?.id;
+        if (uid) await redirectAfterAuth(uid);
+        else setFormError("Could not sign in.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <>
@@ -139,11 +211,13 @@ export function AuthCard() {
           </div>
         </div>
 
-        <form
-          className="space-y-4"
-          onSubmit={(e) => e.preventDefault()}
-          noValidate
-        >
+        <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)} noValidate>
+          {formError ? (
+            <p className="text-center text-sm text-red-600" role="alert">
+              {formError}
+            </p>
+          ) : null}
+
           {mode === "signup" ? (
             <div>
               <label
@@ -160,6 +234,27 @@ export function AuthCard() {
                 placeholder="Dr. Jane Smith"
                 className="mt-1.5 w-full border-0 border-b border-kinex-outline/35 bg-transparent pb-1.5 text-[15px] text-kinex-on-surface placeholder:text-kinex-muted/80 focus:border-kinex-primary focus:outline-none focus:ring-0"
               />
+            </div>
+          ) : null}
+
+          {mode === "signup" ? (
+            <div>
+              <label
+                htmlFor="auth-role"
+                className="text-xs font-bold uppercase tracking-wide text-kinex-on-surface-variant"
+              >
+                Account type
+              </label>
+              <select
+                id="auth-role"
+                name="role"
+                defaultValue="patient"
+                className="mt-1.5 w-full border-0 border-b border-kinex-outline/35 bg-transparent pb-1.5 text-[15px] text-kinex-on-surface focus:border-kinex-primary focus:outline-none focus:ring-0"
+              >
+                <option value="patient">Patient</option>
+                <option value="doctor">Doctor</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
           ) : null}
 
@@ -211,14 +306,28 @@ export function AuthCard() {
 
           <Button
             type="submit"
-            className="h-11 w-full rounded-xl bg-kinex-primary text-[15px] font-semibold text-white hover:bg-kinex-container"
+            disabled={loading}
+            className="h-11 w-full rounded-xl bg-kinex-primary text-[15px] font-semibold text-white hover:bg-kinex-container disabled:opacity-60"
           >
-            {mode === "login" ? "Log In" : "Sign Up"}
+            {loading
+              ? "Please wait…"
+              : mode === "login"
+                ? "Log In"
+                : "Sign Up"}
           </Button>
         </form>
-      </div>
 
-      
+        <div className="mt-5 border-t border-kinex-outline/15 pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            className="h-10 w-full rounded-xl border border-kinex-outline/25 bg-kinex-surface-low text-[13px] font-semibold text-kinex-on-surface hover:bg-[#e8eaec]"
+            onClick={() => router.push("/dashboard/patient")}
+          >
+            Open patient dashboard
+          </Button>
+        </div>
+      </div>
     </>
   );
 }

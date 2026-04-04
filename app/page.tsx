@@ -1,3 +1,4 @@
+import { BookAppointmentBlock } from "@/components/booking/BookAppointmentBlock";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/sections/Hero";
@@ -16,6 +17,7 @@ export default function HomePage() {
         <Stats />
         <Services />
         <Team />
+        <BookAppointmentBlock />
         <Testimonials />
         <Newsletter />
       </main>

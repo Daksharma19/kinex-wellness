@@ -18,7 +18,7 @@ const company = [
 const support = [
   { href: "#help", label: "Help Center" },
   { href: "#privacy", label: "Privacy Policy" },
-  { href: "#portal", label: "Patient Portal" },
+  { href: "/dashboard/patient", label: "Patient Portal" },
 ];
 
 export function Footer() {
