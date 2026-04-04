@@ -1,24 +1,25 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { VisitType } from "@/lib/database.types";
+import { createSupabaseWithClerkJwt } from "@/lib/supabase-clerk";
 import {
   bookAppointment,
   fetchAvailableTimeSlots,
   type AvailableSlotRow,
 } from "@/lib/supabase-appointments";
-import { supabase } from "@/lib/supabase";
 
 const inputClass =
   "mt-1.5 w-full border-0 border-b border-kinex-outline/35 bg-transparent pb-1.5 text-[15px] text-kinex-on-surface focus:border-kinex-primary focus:outline-none focus:ring-0";
 
 export function BookAppointmentBlock() {
+  const { isLoaded, isSignedIn, userId, getToken } = useAuth();
   const [slots, setSlots] = useState<AvailableSlotRow[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
   const [slotId, setSlotId] = useState("");
   const [visitType, setVisitType] = useState<VisitType>("clinic");
   const [meetingLink, setMeetingLink] = useState("");
@@ -45,23 +46,14 @@ export function BookAppointmentBlock() {
   }, []);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      setUserId(data.session?.user?.id ?? null);
-    });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
-    });
     void loadSlots();
-    return () => subscription.unsubscribe();
   }, [loadSlots]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
     setError(null);
-    if (!userId) {
+    if (!userId || !isSignedIn) {
       setError("Please sign in to book.");
       return;
     }
@@ -71,17 +63,23 @@ export function BookAppointmentBlock() {
       return;
     }
     setSubmitting(true);
-    const { error: bookErr } = await bookAppointment({
-      patientId: userId,
-      doctorId: picked.doctor_id,
-      timeSlotId: picked.id,
-      type: visitType,
-      meetingLink:
-        visitType === "online" && meetingLink.trim()
-          ? meetingLink.trim()
-          : null,
-      notes: notes.trim() || null,
-    });
+    const token =
+      (await getToken({ template: "supabase" })) ?? (await getToken());
+    const client = createSupabaseWithClerkJwt(token);
+    const { error: bookErr } = await bookAppointment(
+      {
+        patientId: userId,
+        doctorId: picked.doctor_id,
+        timeSlotId: picked.id,
+        type: visitType,
+        meetingLink:
+          visitType === "online" && meetingLink.trim()
+            ? meetingLink.trim()
+            : null,
+        notes: notes.trim() || null,
+      },
+      client
+    );
     setSubmitting(false);
     if (bookErr) {
       setError(bookErr.message);
@@ -110,7 +108,9 @@ export function BookAppointmentBlock() {
           a meeting link now or after confirmation.
         </p>
 
-        {!userId ? (
+        {!isLoaded ? (
+          <div className="mt-8 h-48 animate-pulse rounded-2xl bg-white/70 shadow-card ring-1 ring-kinex-outline/10" />
+        ) : !isSignedIn || !userId ? (
           <div className="mt-8 rounded-2xl bg-white p-6 text-center shadow-card ring-1 ring-kinex-outline/10 md:p-8">
             <p className="text-sm text-kinex-on-surface-variant">
               Sign in to complete booking.

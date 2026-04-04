@@ -1,8 +1,13 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { supabase } from "@/lib/supabase";
 import type { VisitType } from "@/lib/database.types";
 
-export async function fetchProfileRole(userId: string) {
-  const { data, error } = await supabase
+export async function fetchProfileRole(
+  userId: string,
+  client: SupabaseClient = supabase
+) {
+  const { data, error } = await client
     .from("profiles")
     .select("role, full_name")
     .eq("id", userId)
@@ -10,8 +15,11 @@ export async function fetchProfileRole(userId: string) {
   return { data, error };
 }
 
-export async function fetchDoctorRowForProfile(profileId: string) {
-  const { data, error } = await supabase
+export async function fetchDoctorRowForProfile(
+  profileId: string,
+  client: SupabaseClient = supabase
+) {
+  const { data, error } = await client
     .from("doctors")
     .select("id")
     .eq("profile_id", profileId)
@@ -20,8 +28,11 @@ export async function fetchDoctorRowForProfile(profileId: string) {
 }
 
 /** Patient dashboard: appointments + doctor full_name + medical_records. */
-export async function fetchPatientAppointments(patientId: string) {
-  const { data, error } = await supabase
+export async function fetchPatientAppointments(
+  patientId: string,
+  client: SupabaseClient = supabase
+) {
+  const { data, error } = await client
     .from("appointments")
     .select(
       `
@@ -50,8 +61,11 @@ export async function fetchPatientAppointments(patientId: string) {
 }
 
 /** Doctor dashboard: appointments for this doctor with patient profile + slot + records. */
-export async function fetchDoctorAppointments(doctorId: string) {
-  const { data, error } = await supabase
+export async function fetchDoctorAppointments(
+  doctorId: string,
+  client: SupabaseClient = supabase
+) {
+  const { data, error } = await client
     .from("appointments")
     .select(
       `
@@ -77,8 +91,8 @@ export async function fetchDoctorAppointments(doctorId: string) {
   return { data, error };
 }
 
-export async function fetchUnverifiedDoctors() {
-  const { data, error } = await supabase
+export async function fetchUnverifiedDoctors(client: SupabaseClient = supabase) {
+  const { data, error } = await client
     .from("doctors")
     .select(
       `
@@ -96,8 +110,11 @@ export async function fetchUnverifiedDoctors() {
   return { data, error };
 }
 
-export async function verifyDoctor(doctorId: string) {
-  return await supabase
+export async function verifyDoctor(
+  doctorId: string,
+  client: SupabaseClient = supabase
+) {
+  return await client
     .from("doctors")
     .update({ is_verified: true, updated_at: new Date().toISOString() })
     .eq("id", doctorId)
@@ -116,9 +133,9 @@ export type AvailableSlotRow = {
   } | null;
 };
 
-export async function fetchAvailableTimeSlots() {
+export async function fetchAvailableTimeSlots(client: SupabaseClient = supabase) {
   const now = new Date().toISOString();
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("time_slots")
     .select(
       `
@@ -138,15 +155,18 @@ export async function fetchAvailableTimeSlots() {
   return { data: data as AvailableSlotRow[] | null, error };
 }
 
-export async function bookAppointment(params: {
-  patientId: string;
-  doctorId: string;
-  timeSlotId: string;
-  type: VisitType;
-  meetingLink?: string | null;
-  notes?: string | null;
-}) {
-  const { data, error } = await supabase
+export async function bookAppointment(
+  params: {
+    patientId: string;
+    doctorId: string;
+    timeSlotId: string;
+    type: VisitType;
+    meetingLink?: string | null;
+    notes?: string | null;
+  },
+  client: SupabaseClient = supabase
+) {
+  const { data, error } = await client
     .from("appointments")
     .insert({
       patient_id: params.patientId,
@@ -162,7 +182,7 @@ export async function bookAppointment(params: {
 
   if (error) return { data: null, error };
 
-  const { error: slotError } = await supabase
+  const { error: slotError } = await client
     .from("time_slots")
     .update({ is_booked: true })
     .eq("id", params.timeSlotId);

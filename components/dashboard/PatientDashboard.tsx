@@ -34,13 +34,14 @@ import {
   type CSSProperties,
 } from "react";
 
-import { signOut } from "@/lib/auth";
+import { useAuth } from "@clerk/nextjs";
+
 import { KINEX_LOCATION } from "@/lib/contact";
+import { createSupabaseWithClerkJwt } from "@/lib/supabase-clerk";
 import {
   fetchPatientAppointments,
   fetchProfileRole,
 } from "@/lib/supabase-appointments";
-import { supabase } from "@/lib/supabase";
 
 const TEAL = "#005F5F";
 const TEAL_SOFT = "rgba(0, 95, 95, 0.12)";
@@ -140,37 +141,39 @@ function ActionCard({
 
 export function PatientDashboard() {
   const router = useRouter();
+  const { isLoaded, isSignedIn, userId, getToken, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [patientName, setPatientName] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  const busy = !isLoaded || loading;
+
   const load = useCallback(async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const uid = sessionData.session?.user?.id;
-    if (!uid) {
+    if (!isSignedIn || !userId) {
       router.replace("/auth?mode=login");
       return;
     }
+    const token =
+      (await getToken({ template: "supabase" })) ?? (await getToken());
+    const client = createSupabaseWithClerkJwt(token);
     const [profileRes, apptRes] = await Promise.all([
-      fetchProfileRole(uid),
-      fetchPatientAppointments(uid),
+      fetchProfileRole(userId, client),
+      fetchPatientAppointments(userId, client),
     ]);
     if (profileRes.error) setFetchError(profileRes.error.message);
     else if (apptRes.error) setFetchError(apptRes.error.message);
     else setFetchError(null);
-    const name =
-      profileRes.data?.full_name ??
-      sessionData.session?.user?.email ??
-      "there";
+    const name = profileRes.data?.full_name ?? "there";
     setPatientName(name);
     setAppointments((apptRes.data as unknown as AppointmentRow[]) ?? []);
     setLoading(false);
-  }, [router]);
+  }, [router, isSignedIn, userId, getToken]);
 
   useEffect(() => {
+    if (!isLoaded) return;
     void load();
-  }, [load]);
+  }, [load, isLoaded]);
 
   const { nextAppointment, historyRows } = useMemo(() => {
     const now = Date.now();
@@ -198,8 +201,7 @@ export function PatientDashboard() {
   const firstName = patientName?.split(/\s+/)[0] ?? "…";
 
   async function handleLogout() {
-    await signOut();
-    router.replace("/auth?mode=login");
+    await signOut({ redirectUrl: "/auth?mode=login" });
   }
 
   return (
@@ -278,7 +280,7 @@ export function PatientDashboard() {
                 className="flex h-full w-full items-center justify-center text-sm font-semibold text-white uppercase"
                 style={{ backgroundColor: TEAL }}
               >
-                {loading
+                {busy
                   ? "…"
                   : (firstName.replace(/\W/g, "")[0] ?? "?").toUpperCase()}
               </span>
@@ -304,7 +306,7 @@ export function PatientDashboard() {
                 Patient overview
               </p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#111827] md:text-[28px]">
-                Welcome back, {loading ? "…" : firstName}.
+                Welcome back, {busy ? "…" : firstName}.
               </h1>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#6b7280]">
                 Here is a snapshot of your health and upcoming care. Everything
@@ -527,7 +529,7 @@ export function PatientDashboard() {
                 <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/80">
                   Next appointment
                 </p>
-                {loading ? (
+                {busy ? (
                   <p className="mt-3 text-sm text-white/90">Loading…</p>
                 ) : !nextAppointment?.time_slots ? (
                   <>
@@ -626,7 +628,7 @@ export function PatientDashboard() {
                   </button>
                 </div>
                 <ul className="space-y-3">
-                  {loading ? (
+                  {busy ? (
                     <li className="rounded-xl border border-[#f3f4f6] bg-[#fafafa] p-4 text-sm text-[#6b7280]">
                       Loading history…
                     </li>

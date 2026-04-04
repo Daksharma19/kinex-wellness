@@ -1,52 +1,37 @@
 "use client";
 
-import Link from "next/link";
+import { SignIn, SignUp } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
-import { Apple } from "lucide-react";
+import { useCallback, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
-import { signIn, signUp } from "@/lib/auth";
-import type { UserRole } from "@/lib/database.types";
-import { dashboardPathForRole } from "@/lib/dashboard-route";
-import { fetchProfileRole } from "@/lib/supabase-appointments";
 import { cn } from "@/lib/utils";
 
 type AuthMode = "login" | "signup";
 
-function GoogleMark({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      aria-hidden
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        fill="#4285F4"
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      />
-    </svg>
-  );
-}
+const clerkAppearance = {
+  variables: {
+    colorPrimary: "#005F5F",
+    colorText: "#111827",
+    colorTextSecondary: "#6b7280",
+    borderRadius: "0.75rem",
+  },
+  elements: {
+    card: "shadow-none border-0 bg-transparent",
+    headerTitle: "hidden",
+    headerSubtitle: "hidden",
+    socialButtonsBlockButton:
+      "rounded-xl border-0 bg-[#f0f2f5] text-[13px] font-semibold hover:bg-[#e8eaec]",
+    formButtonPrimary:
+      "rounded-xl bg-[#005F5F] hover:bg-[#004747] text-[15px] font-semibold",
+    footerAction: "hidden",
+    footer: "hidden",
+  },
+} as const;
 
 export function AuthCard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
   const mode: AuthMode = useMemo(() => {
     const m = searchParams.get("mode");
@@ -59,72 +44,6 @@ export function AuthCard() {
     },
     [router]
   );
-
-  async function redirectAfterAuth(userId: string) {
-    const { data: profile, error } = await fetchProfileRole(userId);
-    if (error) {
-      setFormError(error.message);
-      return;
-    }
-    router.replace(dashboardPathForRole(profile?.role));
-  }
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setFormError(null);
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    const email = String(fd.get("email") ?? "").trim();
-    const password = String(fd.get("password") ?? "");
-    if (!email || !password) {
-      setFormError("Enter email and password.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if (mode === "signup") {
-        const fullName = String(fd.get("name") ?? "").trim();
-        const role = String(fd.get("role") ?? "patient") as UserRole;
-        if (!fullName) {
-          setFormError("Enter your full name.");
-          return;
-        }
-        if (!["patient", "doctor", "admin"].includes(role)) {
-          setFormError("Choose a valid account type.");
-          return;
-        }
-        const { data, error } = await signUp({
-          email,
-          password,
-          fullName,
-          role,
-        });
-        if (error) {
-          setFormError(error.message);
-          return;
-        }
-        if (data.session?.user?.id) {
-          await redirectAfterAuth(data.session.user.id);
-        } else {
-          setFormError(
-            "Check your email to confirm your account, then sign in."
-          );
-        }
-      } else {
-        const { data, error } = await signIn(email, password);
-        if (error) {
-          setFormError(error.message);
-          return;
-        }
-        const uid = data.session?.user?.id;
-        if (uid) await redirectAfterAuth(uid);
-        else setFormError("Could not sign in.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
 
   return (
     <>
@@ -178,144 +97,23 @@ export function AuthCard() {
           </button>
         </div>
 
-        <p className="mt-4 text-center text-[11px] font-semibold uppercase tracking-wider text-kinex-muted">
-          Access with
-        </p>
-        <div className="mt-2 grid grid-cols-2 gap-2.5">
-          <Button
-            type="button"
-            variant="secondary"
-            className="h-10 rounded-xl border-0 bg-kinex-surface-low text-[13px] font-semibold text-kinex-on-surface hover:bg-[#e8eaec]"
-          >
-            <GoogleMark className="h-4 w-4" />
-            Google
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="h-10 rounded-xl border-0 bg-kinex-surface-low text-[13px] font-semibold text-kinex-on-surface hover:bg-[#e8eaec]"
-          >
-            <Apple className="h-4 w-4" />
-            Apple
-          </Button>
-        </div>
-
-        <div className="relative my-5">
-          <div className="absolute inset-0 flex items-center" aria-hidden>
-            <div className="w-full border-t border-kinex-outline/20" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-[11px] font-semibold uppercase tracking-wider text-kinex-muted">
-              Or continue with email
-            </span>
-          </div>
-        </div>
-
-        <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)} noValidate>
-          {formError ? (
-            <p className="text-center text-sm text-red-600" role="alert">
-              {formError}
-            </p>
-          ) : null}
-
-          {mode === "signup" ? (
-            <div>
-              <label
-                htmlFor="auth-name"
-                className="text-xs font-bold uppercase tracking-wide text-kinex-on-surface-variant"
-              >
-                Full name
-              </label>
-              <input
-                id="auth-name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                placeholder="Dr. Jane Smith"
-                className="mt-1.5 w-full border-0 border-b border-kinex-outline/35 bg-transparent pb-1.5 text-[15px] text-kinex-on-surface placeholder:text-kinex-muted/80 focus:border-kinex-primary focus:outline-none focus:ring-0"
-              />
-            </div>
-          ) : null}
-
-          {mode === "signup" ? (
-            <div>
-              <label
-                htmlFor="auth-role"
-                className="text-xs font-bold uppercase tracking-wide text-kinex-on-surface-variant"
-              >
-                Account type
-              </label>
-              <select
-                id="auth-role"
-                name="role"
-                defaultValue="patient"
-                className="mt-1.5 w-full border-0 border-b border-kinex-outline/35 bg-transparent pb-1.5 text-[15px] text-kinex-on-surface focus:border-kinex-primary focus:outline-none focus:ring-0"
-              >
-                <option value="patient">Patient</option>
-                <option value="doctor">Doctor</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-          ) : null}
-
-          <div>
-            <label
-              htmlFor="auth-email"
-              className="text-xs font-bold uppercase tracking-wide text-kinex-on-surface-variant"
-            >
-              Email address
-            </label>
-            <input
-              id="auth-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="name@clinic.com"
-              className="mt-1.5 w-full border-0 border-b border-kinex-outline/35 bg-transparent pb-1.5 text-[15px] text-kinex-on-surface placeholder:text-kinex-muted/80 focus:border-kinex-primary focus:outline-none focus:ring-0"
+        <div className="mt-4 min-h-[380px]">
+          {mode === "login" ? (
+            <SignIn
+              routing="virtual"
+              signUpUrl="/auth?mode=signup"
+              forceRedirectUrl="/dashboard/patient"
+              appearance={clerkAppearance}
             />
-          </div>
-
-          <div>
-            <div className="flex items-baseline justify-between gap-2">
-              <label
-                htmlFor="auth-password"
-                className="text-xs font-bold uppercase tracking-wide text-kinex-on-surface-variant"
-              >
-                Password
-              </label>
-              {mode === "login" ? (
-                <Link
-                  href="#forgot-password"
-                  className="text-xs font-semibold text-kinex-primary hover:text-kinex-container"
-                >
-                  Forgot Password?
-                </Link>
-              ) : null}
-            </div>
-            <input
-              id="auth-password"
-              name="password"
-              type="password"
-              autoComplete={
-                mode === "signup" ? "new-password" : "current-password"
-              }
-              placeholder="••••••••"
-              className="mt-1.5 w-full border-0 border-b border-kinex-outline/35 bg-transparent pb-1.5 text-[15px] text-kinex-on-surface placeholder:text-kinex-muted/80 focus:border-kinex-primary focus:outline-none focus:ring-0"
+          ) : (
+            <SignUp
+              routing="virtual"
+              signInUrl="/auth?mode=login"
+              forceRedirectUrl="/dashboard/patient"
+              appearance={clerkAppearance}
             />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="h-11 w-full rounded-xl bg-kinex-primary text-[15px] font-semibold text-white hover:bg-kinex-container disabled:opacity-60"
-          >
-            {loading
-              ? "Please wait…"
-              : mode === "login"
-                ? "Log In"
-                : "Sign Up"}
-          </Button>
-        </form>
+          )}
+        </div>
 
         <div className="mt-5 border-t border-kinex-outline/15 pt-4">
           <Button

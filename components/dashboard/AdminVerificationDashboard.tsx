@@ -1,16 +1,17 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/auth";
+import { createSupabaseWithClerkJwt } from "@/lib/supabase-clerk";
 import {
   fetchUnverifiedDoctors,
   verifyDoctor,
 } from "@/lib/supabase-appointments";
-import { supabase } from "@/lib/supabase";
 
 type UnverifiedRow = {
   id: string;
@@ -24,33 +25,40 @@ type UnverifiedRow = {
 
 export function AdminVerificationDashboard() {
   const router = useRouter();
+  const { isLoaded, isSignedIn, userId, getToken, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<UnverifiedRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [sb, setSb] = useState<SupabaseClient | null>(null);
 
   const load = useCallback(async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session?.user?.id) {
+    if (!isSignedIn || !userId) {
       router.replace("/auth?mode=login");
       return;
     }
-    const { data, error: qErr } = await fetchUnverifiedDoctors();
+    const token =
+      (await getToken({ template: "supabase" })) ?? (await getToken());
+    const client = createSupabaseWithClerkJwt(token);
+    setSb(client);
+    const { data, error: qErr } = await fetchUnverifiedDoctors(client);
     if (qErr) setError(qErr.message);
     else {
       setError(null);
       setRows((data as unknown as UnverifiedRow[]) ?? []);
     }
     setLoading(false);
-  }, [router]);
+  }, [router, isSignedIn, userId, getToken]);
 
   useEffect(() => {
+    if (!isLoaded) return;
     void load();
-  }, [load]);
+  }, [load, isLoaded]);
 
   async function handleVerify(doctorId: string) {
+    if (!sb) return;
     setBusyId(doctorId);
-    const { error: upErr } = await verifyDoctor(doctorId);
+    const { error: upErr } = await verifyDoctor(doctorId, sb);
     setBusyId(null);
     if (upErr) {
       setError(upErr.message);
@@ -60,11 +68,10 @@ export function AdminVerificationDashboard() {
   }
 
   async function handleSignOut() {
-    await signOut();
-    router.replace("/auth?mode=login");
+    await signOut({ redirectUrl: "/auth?mode=login" });
   }
 
-  if (loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="relative z-10 mx-auto max-w-[1200px] px-6 py-10 lg:px-8">
         <div className="h-40 animate-pulse rounded-2xl bg-white/60 shadow-card ring-1 ring-kinex-outline/10" />

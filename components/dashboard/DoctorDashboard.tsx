@@ -1,16 +1,17 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/auth";
+import { createSupabaseWithClerkJwt } from "@/lib/supabase-clerk";
 import {
   fetchDoctorAppointments,
   fetchDoctorRowForProfile,
 } from "@/lib/supabase-appointments";
-import { supabase } from "@/lib/supabase";
 
 type DoctorAppointmentRow = {
   id: string;
@@ -37,31 +38,46 @@ function formatRange(start: string, end: string) {
 
 export function DoctorDashboard() {
   const router = useRouter();
+  const { isLoaded, isSignedIn, userId, getToken, signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [rows, setRows] = useState<DoctorAppointmentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [sb, setSb] = useState<SupabaseClient | null>(null);
 
-  const loadAppointments = useCallback(async (docId: string) => {
-    const { data, error: loadErr } = await fetchDoctorAppointments(docId);
-    if (loadErr) setError(loadErr.message);
-    else {
-      setError(null);
-      setRows((data as unknown as DoctorAppointmentRow[]) ?? []);
-    }
-  }, []);
+  const loadAppointments = useCallback(
+    async (docId: string, client: SupabaseClient) => {
+      const { data, error: loadErr } = await fetchDoctorAppointments(
+        docId,
+        client
+      );
+      if (loadErr) setError(loadErr.message);
+      else {
+        setError(null);
+        setRows((data as unknown as DoctorAppointmentRow[]) ?? []);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
+    if (!isLoaded) return;
     let cancelled = false;
 
     async function init() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const uid = sessionData.session?.user?.id;
-      if (!uid) {
+      if (!isSignedIn || !userId) {
         router.replace("/auth?mode=login");
         return;
       }
-      const { data: doc, error: docErr } = await fetchDoctorRowForProfile(uid);
+      const token =
+        (await getToken({ template: "supabase" })) ?? (await getToken());
+      const client = createSupabaseWithClerkJwt(token);
+      if (cancelled) return;
+      setSb(client);
+      const { data: doc, error: docErr } = await fetchDoctorRowForProfile(
+        userId,
+        client
+      );
       if (cancelled) return;
       if (docErr || !doc?.id) {
         setError(
@@ -72,7 +88,7 @@ export function DoctorDashboard() {
         return;
       }
       setDoctorId(doc.id);
-      await loadAppointments(doc.id);
+      await loadAppointments(doc.id, client);
       setLoading(false);
     }
 
@@ -80,12 +96,12 @@ export function DoctorDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [router, loadAppointments]);
+  }, [router, loadAppointments, isLoaded, isSignedIn, userId, getToken]);
 
   useEffect(() => {
-    if (!doctorId) return;
+    if (!doctorId || !sb) return;
 
-    const channel = supabase
+    const channel = sb
       .channel(`appointments-doctor-${doctorId}`)
       .on(
         "postgres_changes",
@@ -96,22 +112,21 @@ export function DoctorDashboard() {
           filter: `doctor_id=eq.${doctorId}`,
         },
         () => {
-          void loadAppointments(doctorId);
+          void loadAppointments(doctorId, sb);
         }
       )
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      void sb.removeChannel(channel);
     };
-  }, [doctorId, loadAppointments]);
+  }, [doctorId, loadAppointments, sb]);
 
   async function handleSignOut() {
-    await signOut();
-    router.replace("/auth?mode=login");
+    await signOut({ redirectUrl: "/auth?mode=login" });
   }
 
-  if (loading) {
+  if (!isLoaded || loading) {
     return (
       <div className="relative z-10 mx-auto max-w-[1200px] px-6 py-10 lg:px-8">
         <div className="h-40 animate-pulse rounded-2xl bg-white/60 shadow-card ring-1 ring-kinex-outline/10" />
